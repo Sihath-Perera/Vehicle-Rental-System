@@ -11,4 +11,11 @@
         <exec.mainClass>com.mycompany.vehicle.rental.system.cost21053.VehicleRentalSystemCOST21053</exec.mainClass>
     </properties>
     <name>Vehicle-Rental-System</name>
+    <dependencies>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.7.0</version>
+        </dependency>
+    </dependencies>
 </project>
