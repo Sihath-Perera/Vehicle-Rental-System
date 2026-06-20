@@ -5,28 +5,30 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    // Static instance variable to store the single connection manager
     private static DatabaseConnection instance;
     private Connection connection;
     
-    private final String url = "jdbc:mysql://localhost:3306/vehicle_rental_db";
-    private final String dbUser = "root";  
-    private final String dbPass = "root";     
+    // Exact credentials from your Clever Cloud dashboard screenshot
+    private final String host = "b1hmut8htuasi2tb8u9s-mysql.services.clever-cloud.com"; 
+    private final String dbName = "b1hmut8htuasi2tb8u9s"; 
+    private final String dbUser = "umx3w2pvdds3gjvs";  
+    private final String dbPass = "D5gcDOdgfKybvck7uplD";      
 
-    // Private constructor enforces the Singleton Pattern
     private DatabaseConnection() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
+            // Appending time zone and SSL parameters for cloud compatibility
+            String url = "jdbc:mysql://" + host + ":3306/" + dbName + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+            
             this.connection = DriverManager.getConnection(url, dbUser, dbPass);
-            System.out.println(">>> Database Connected Successfully! <<<");
+            System.out.println(">>> Connected to Centralized Cloud Database! <<<");
         } catch (ClassNotFoundException e) {
             System.out.println("MySQL Driver Missing: " + e.getMessage());
         } catch (SQLException e) {
-            System.out.println("Database Connection Failed: " + e.getMessage());
+            System.out.println("Cloud Database Connection Failed: " + e.getMessage());
         }
     }
 
-    // Global access point to get the single active database connector
     public static DatabaseConnection getInstance() throws SQLException {
         if (instance == null || instance.getConnection().isClosed()) {
             instance = new DatabaseConnection();
