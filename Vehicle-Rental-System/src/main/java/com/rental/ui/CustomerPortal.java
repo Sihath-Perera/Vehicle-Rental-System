@@ -1,22 +1,22 @@
 package com.rental.ui;
 
+import com.rental.config.DatabaseConnection;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class CustomerPortal extends JFrame {
 
-    // Core variables precisely matching our backend data mapping requirements
     private JTable tblAvailableVehicles;
     private DefaultTableModel tableModel;
-    private JTextField txtPickupDate;
-    private JTextField txtReturnDate;
-    private JLabel lblTotalCost;
-    private JButton btnConfirmRental;
+    private JButton btnBookVehicle;
     private JButton btnLogout;
 
     public CustomerPortal() {
-        // Look & Feel synchronization - Keeps styling identical across all team laptops
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -25,41 +25,40 @@ public class CustomerPortal extends JFrame {
                 }
             }
         } catch (Exception e) {
-            // Fallback safely to system default if Nimbus is missing
+            // Fallback safely to default
         }
 
         initComponents();
+        loadAvailableVehicles(); // ⚡ Live fetch available fleet from Cloud DB on startup!
     }
 
     private void initComponents() {
-        // Main window attributes
-        setTitle("Customer Portal - Vehicle Booking Catalog");
+        setTitle("Customer Portal - Rent Your Vehicle");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(950, 600);
+        setSize(900, 600);
         setResizable(false);
-        setLocationRelativeTo(null); // Centers window on screen
+        setLocationRelativeTo(null);
 
-        // Main Layout (BorderLayout splits control panels cleanly)
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
-        mainPanel.setBackground(new Color(244, 246, 249)); // Soft gray/blue canvas
+        mainPanel.setBackground(new Color(244, 246, 249));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         this.setContentPane(mainPanel);
 
         // ==========================================
-        // 1. TOP HEADER PANEL
+        // 1. TOP CONTROL BANNER
         // ==========================================
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(30, 58, 138)); // Matching corporate dark blue
+        topPanel.setBackground(new Color(30, 58, 138)); // Trustworthy Royal Corporate Blue
         topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-        JLabel lblWelcome = new JLabel("Welcome to Your Dashboard", JLabel.LEFT);
-        lblWelcome.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblWelcome.setForeground(Color.WHITE);
-        topPanel.add(lblWelcome, BorderLayout.WEST);
+        JLabel lblTitle = new JLabel("Available Rental Showroom", JLabel.LEFT);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitle.setForeground(Color.WHITE);
+        topPanel.add(lblTitle, BorderLayout.WEST);
 
         btnLogout = new JButton("Logout");
         btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnLogout.setBackground(new Color(220, 38, 38)); // Vibrant red notification tint
+        btnLogout.setBackground(new Color(220, 38, 38)); 
         btnLogout.setForeground(Color.WHITE);
         btnLogout.setFocusPainted(false);
         btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -68,7 +67,7 @@ public class CustomerPortal extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // ==========================================
-        // 2. CENTER PANEL: FLEET SHOWCASE CATALOG
+        // 2. CENTER PANEL: THE VEHICLE GRID SHOWCASE
         // ==========================================
         JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
         centerPanel.setBackground(Color.WHITE);
@@ -77,123 +76,130 @@ public class CustomerPortal extends JFrame {
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
 
-        JLabel lblCatalogTitle = new JLabel("Available Fleet Catalog", JLabel.LEFT);
-        lblCatalogTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        lblCatalogTitle.setForeground(new Color(51, 65, 85));
-        centerPanel.add(lblCatalogTitle, BorderLayout.NORTH);
+        JLabel lblTableTitle = new JLabel("Select a vehicle from our active fleet below:", JLabel.LEFT);
+        lblTableTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTableTitle.setForeground(new Color(51, 65, 85));
+        centerPanel.add(lblTableTitle, BorderLayout.NORTH);
 
-        // Define explicit column architecture for the data mapping rows
-        String[] columns = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)", "Status"};
+        String[] columns = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Prevent users from altering database fields directly inside rows
+                return false; 
             }
         };
 
         tblAvailableVehicles = new JTable(tableModel);
         tblAvailableVehicles.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        tblAvailableVehicles.setRowHeight(28);
+        tblAvailableVehicles.setRowHeight(30);
         tblAvailableVehicles.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
         tblAvailableVehicles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Temp Mock Data to prove visual mapping works perfectly before controller binding
-        tableModel.addRow(new Object[]{"WP-CB-1234", "Toyota", "Prius", "8500.00", "Available"});
-        tableModel.addRow(new Object[]{"WP-DA-5678", "Honda", "Civic", "9500.00", "Available"});
-
+        // 🔄 MEMORY ANCHOR RETRIEVED: Old hardcoded rows completely removed!
+        
         JScrollPane tableScrollPane = new JScrollPane(tblAvailableVehicles);
         centerPanel.add(tableScrollPane, BorderLayout.CENTER);
 
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         // ==========================================
-        // 3. RIGHT PANEL: RESERVATION & CALCULATION ENGINE
+        // 3. SOUTH PANEL: BOOKING CTA ACTION ENGINE
         // ==========================================
-        JPanel rightPanel = new JPanel(new GridBagLayout());
-        rightPanel.setBackground(Color.WHITE);
-        rightPanel.setPreferredSize(new Dimension(300, 0));
-        rightPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(230, 233, 238), 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        southPanel.setBackground(new Color(244, 246, 249));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(8, 0, 8, 0);
-        gbc.gridx = 0;
+        btnBookVehicle = new JButton("Confirm Booking Reservation");
+        btnBookVehicle.setPreferredSize(new Dimension(240, 42));
+        btnBookVehicle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnBookVehicle.setBackground(new Color(22, 163, 74)); // Success Green
+        btnBookVehicle.setForeground(Color.WHITE);
+        btnBookVehicle.setFocusPainted(false);
+        btnBookVehicle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        southPanel.add(btnBookVehicle);
 
-        JLabel lblBookingHeader = new JLabel("Book Your Ride", JLabel.CENTER);
-        lblBookingHeader.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblBookingHeader.setForeground(new Color(30, 58, 138));
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        rightPanel.add(lblBookingHeader, gbc);
+        mainPanel.add(southPanel, BorderLayout.SOUTH);
 
-        gbc.insets = new Insets(4, 0, 4, 0);
-
-        // Pickup Inputs
-        JLabel lblPickup = new JLabel("Pickup Date (YYYY-MM-DD):");
-        lblPickup.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        gbc.gridy = 1;
-        rightPanel.add(lblPickup, gbc);
-
-        txtPickupDate = new JTextField();
-        txtPickupDate.setPreferredSize(new Dimension(0, 32));
-        txtPickupDate.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        gbc.gridy = 2;
-        rightPanel.add(txtPickupDate, gbc);
-
-        // Return Inputs
-        JLabel lblReturn = new JLabel("Return Date (YYYY-MM-DD):");
-        lblReturn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        gbc.gridy = 3;
-        rightPanel.add(lblReturn, gbc);
-
-        txtReturnDate = new JTextField();
-        txtReturnDate.setPreferredSize(new Dimension(0, 32));
-        txtReturnDate.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        gbc.gridy = 4;
-        rightPanel.add(txtReturnDate, gbc);
-
-        // Cost Calculation Showcase
-        JSeparator separator = new JSeparator();
-        gbc.gridy = 5;
-        gbc.insets = new Insets(15, 0, 15, 0);
-        rightPanel.add(separator, gbc);
-        gbc.insets = new Insets(4, 0, 4, 0);
-
-        JLabel lblTotalLabel = new JLabel("Estimated Total Cost:", JLabel.CENTER);
-        lblTotalLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        lblTotalLabel.setForeground(Color.GRAY);
-        gbc.gridy = 6;
-        rightPanel.add(lblTotalLabel, gbc);
-
-        lblTotalCost = new JLabel("0.00 LKR", JLabel.CENTER);
-        lblTotalCost.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTotalCost.setForeground(new Color(22, 163, 74)); // Green color accent for currency calculations
-        gbc.gridy = 7;
-        gbc.insets = new Insets(0, 0, 15, 0);
-        rightPanel.add(lblTotalCost, gbc);
-
-        // Action Booking Trigger
-        btnConfirmRental = new JButton("Confirm Booking");
-        btnConfirmRental.setPreferredSize(new Dimension(0, 40));
-        btnConfirmRental.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnConfirmRental.setBackground(new Color(37, 99, 235)); // Primary Action Blue Accent
-        btnConfirmRental.setForeground(Color.WHITE);
-        btnConfirmRental.setFocusPainted(false);
-        btnConfirmRental.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        gbc.gridy = 8;
-        gbc.insets = new Insets(10, 0, 0, 0);
-        rightPanel.add(btnConfirmRental, gbc);
-
-        mainPanel.add(rightPanel, BorderLayout.EAST);
+        // ==========================================
+        // ⚡ BACKEND ACTION LISTENERS
+        // ==========================================
+        btnBookVehicle.addActionListener(e -> performVehicleBooking());
+        btnLogout.addActionListener(e -> {
+            new LoginFrame().setVisible(true);
+            this.dispose();
+        });
     }
 
-    // Main deployment mechanism enabling instant run capabilities right inside NetBeans
+    /**
+     * Dynamically filters and pulls only "Available" vehicles from Clever Cloud MySQL
+     */
+    private void loadAvailableVehicles() {
+        tableModel.setRowCount(0); // Wipe stale data views
+        String query = "SELECT * FROM vehicles WHERE status = 'Available'";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                tableModel.addRow(new Object[]{
+                    rs.getString("plate_number"),
+                    rs.getString("brand"),
+                    rs.getString("model"),
+                    rs.getDouble("daily_rate")
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error fetching catalog items: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Books a vehicle, updates state to 'Rented', logs transaction to history
+     */
+    private void performVehicleBooking() {
+        int selectedRow = tblAvailableVehicles.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please choose an available vehicle from the catalogue listing grid.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String plateNumber = tableModel.getValueAt(selectedRow, 0).toString();
+        String brandAndModel = tableModel.getValueAt(selectedRow, 1).toString() + " " + tableModel.getValueAt(selectedRow, 2).toString();
+
+        // Transaction handling: Log booking and update status simultaneously
+        String bookingQuery = "INSERT INTO bookings (plate_number) VALUES (?)";
+        String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Rented' WHERE plate_number = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false); // Enable safe transactional state bounds
+
+            try (PreparedStatement bookingStmt = conn.prepareStatement(bookingQuery);
+                 PreparedStatement vehicleStmt = conn.prepareStatement(vehicleUpdateQuery)) {
+
+                // 1. Log transaction entry
+                bookingStmt.setString(1, plateNumber);
+                bookingStmt.executeUpdate();
+
+                // 2. Change vehicle status so it drops from public showroom catalog
+                vehicleStmt.setString(1, plateNumber);
+                vehicleStmt.executeUpdate();
+
+                conn.commit(); // Push execution batch together safely
+                JOptionPane.showMessageDialog(this, "Reservation Confirmed!\nYou have successfully booked the " + brandAndModel + " (" + plateNumber + ").", "Booking Success", JOptionPane.INFORMATION_MESSAGE);
+                
+                loadAvailableVehicles(); // Reload dynamic catalog list view immediately
+
+            } catch (SQLException ex) {
+                conn.rollback(); // Undo operations if any segment encounters failure conditions
+                throw ex;
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Transaction Processing Interrupted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     public static void main(String[] args) {
-        EventQueue.invokeLater(() -> {
-            new CustomerPortal().setVisible(true);
-        });
+        java.awt.EventQueue.invokeLater(() -> new CustomerPortal().setVisible(true));
     }
 }
