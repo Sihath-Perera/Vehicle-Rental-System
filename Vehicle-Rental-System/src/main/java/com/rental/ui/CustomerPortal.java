@@ -11,8 +11,15 @@ import java.sql.SQLException;
 
 public class CustomerPortal extends JFrame {
 
+    private CardLayout cardLayout;
+    private JPanel cardsContainer;
+    
+    // Core Layout Components
     private JTable tblAvailableVehicles;
-    private DefaultTableModel tableModel;
+    private DefaultTableModel showroomModel;
+    private JTable tblBookingHistory;
+    private DefaultTableModel historyModel;
+    
     private JButton btnBookVehicle;
     private JButton btnLogout;
 
@@ -24,35 +31,34 @@ public class CustomerPortal extends JFrame {
                     break;
                 }
             }
-        } catch (Exception e) {
-            // Fallback safely to default
-        }
+        } catch (Exception e) {}
 
         initComponents();
-        loadAvailableVehicles(); // ⚡ Live fetch available fleet from Cloud DB on startup!
+        loadAvailableVehicles(); 
+        loadBookingHistory();
     }
 
     private void initComponents() {
-        setTitle("Customer Portal - Rent Your Vehicle");
+        setTitle("Customer Portal - Dashboard Panel");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(900, 600);
+        setSize(1050, 620);
         setResizable(false);
         setLocationRelativeTo(null);
 
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(new Color(244, 246, 249));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         this.setContentPane(mainPanel);
 
         // ==========================================
-        // 1. TOP CONTROL BANNER
+        // TOP CONTROL BANNER
         // ==========================================
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(30, 58, 138)); // Trustworthy Royal Corporate Blue
-        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        topPanel.setBackground(new Color(30, 58, 138)); 
+        topPanel.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
 
-        JLabel lblTitle = new JLabel("Available Rental Showroom", JLabel.LEFT);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        JLabel lblTitle = new JLabel("Customer Rental Experience Workspace", JLabel.LEFT);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblTitle.setForeground(Color.WHITE);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
@@ -67,61 +73,128 @@ public class CustomerPortal extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // ==========================================
-        // 2. CENTER PANEL: THE VEHICLE GRID SHOWCASE
+        // LEFT SIDE NAVIGATION WORKSPACE
         // ==========================================
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.setBackground(Color.WHITE);
-        centerPanel.setBorder(BorderFactory.createCompoundBorder(
+        JPanel sidebarPanel = new JPanel(new GridLayout(6, 1, 0, 10));
+        sidebarPanel.setBackground(Color.WHITE);
+        sidebarPanel.setPreferredSize(new Dimension(220, 0));
+        sidebarPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(230, 233, 238), 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+                BorderFactory.createEmptyBorder(20, 15, 20, 15)
         ));
 
-        JLabel lblTableTitle = new JLabel("Select a vehicle from our active fleet below:", JLabel.LEFT);
+        JButton btnShowroomNav = new JButton("🛒 Vehicle Showroom");
+        JButton btnProfileNav = new JButton("👤 My Profile Info");
+        JButton btnHistoryNav = new JButton("📜 Rental History Log");
+
+        JButton[] navButtons = {btnShowroomNav, btnProfileNav, btnHistoryNav};
+        for (JButton btn : navButtons) {
+            btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btn.setBackground(new Color(241, 245, 249));
+            btn.setForeground(new Color(51, 65, 85));
+            btn.setFocusPainted(false);
+            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            sidebarPanel.add(btn);
+        }
+
+        mainPanel.add(sidebarPanel, BorderLayout.WEST);
+
+        // ==========================================
+        // CENTER CANVAS CONTROLLER (CARDLAYOUT ENGINE)
+        // ==========================================
+        cardLayout = new CardLayout();
+        cardsContainer = new JPanel(cardLayout);
+        cardsContainer.setBackground(Color.WHITE);
+
+        // --- CARD 1: VEHICLE SHOWROOM ENGINE ---
+        JPanel pnlShowroom = new JPanel(new BorderLayout(10, 10));
+        pnlShowroom.setBackground(Color.WHITE);
+        pnlShowroom.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JLabel lblTableTitle = new JLabel("Select an available vehicle from our collection:", JLabel.LEFT);
         lblTableTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTableTitle.setForeground(new Color(51, 65, 85));
-        centerPanel.add(lblTableTitle, BorderLayout.NORTH);
+        pnlShowroom.add(lblTableTitle, BorderLayout.NORTH);
 
-        String[] columns = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)"};
-        tableModel = new DefaultTableModel(columns, 0) {
+        String[] showroomCols = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)"};
+        showroomModel = new DefaultTableModel(showroomCols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; 
-            }
+            public boolean isCellEditable(int r, int c) { return false; }
         };
-
-        tblAvailableVehicles = new JTable(tableModel);
+        tblAvailableVehicles = new JTable(showroomModel);
+        tblAvailableVehicles.setRowHeight(28);
         tblAvailableVehicles.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        tblAvailableVehicles.setRowHeight(30);
-        tblAvailableVehicles.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tblAvailableVehicles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        pnlShowroom.add(new JScrollPane(tblAvailableVehicles), BorderLayout.CENTER);
 
-        // 🔄 MEMORY ANCHOR RETRIEVED: Old hardcoded rows completely removed!
-        
-        JScrollPane tableScrollPane = new JScrollPane(tblAvailableVehicles);
-        centerPanel.add(tableScrollPane, BorderLayout.CENTER);
-
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-
-        // ==========================================
-        // 3. SOUTH PANEL: BOOKING CTA ACTION ENGINE
-        // ==========================================
-        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        southPanel.setBackground(new Color(244, 246, 249));
-
+        JPanel southActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        southActionPanel.setBackground(Color.WHITE);
         btnBookVehicle = new JButton("Confirm Booking Reservation");
-        btnBookVehicle.setPreferredSize(new Dimension(240, 42));
-        btnBookVehicle.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btnBookVehicle.setBackground(new Color(22, 163, 74)); // Success Green
+        btnBookVehicle.setPreferredSize(new Dimension(240, 40));
+        btnBookVehicle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnBookVehicle.setBackground(new Color(22, 163, 74));
         btnBookVehicle.setForeground(Color.WHITE);
         btnBookVehicle.setFocusPainted(false);
-        btnBookVehicle.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        southPanel.add(btnBookVehicle);
+        southActionPanel.add(btnBookVehicle);
+        pnlShowroom.add(southActionPanel, BorderLayout.SOUTH);
 
-        mainPanel.add(southPanel, BorderLayout.SOUTH);
+        // --- CARD 2: MY PROFILE CUSTOM DASHBOARD VIEW ---
+        JPanel pnlProfile = new JPanel(new GridBagLayout());
+        pnlProfile.setBackground(Color.WHITE);
+        pnlProfile.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        GridBagConstraints pGbc = new GridBagConstraints();
+        pGbc.fill = GridBagConstraints.HORIZONTAL;
+        pGbc.insets = new Insets(8, 0, 8, 0);
+        pGbc.gridx = 0;
+
+        JLabel lblProfHead = new JLabel("Account Profile Settings", JLabel.CENTER);
+        lblProfHead.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        pGbc.gridy = 0; pGbc.gridwidth = 2;
+        pnlProfile.add(lblProfHead, pGbc);
+        pGbc.gridwidth = 1;
+
+        pGbc.gridy = 1; pGbc.gridx = 0; pnlProfile.add(new JLabel("Full Registered Name:"), pGbc);
+        pGbc.gridx = 1; pnlProfile.add(new JTextField("Pathum Srinath", 20), pGbc);
+        pGbc.gridy = 2; pGbc.gridx = 0; pnlProfile.add(new JLabel("Contact Address Line:"), pGbc);
+        pGbc.gridx = 1; pnlProfile.add(new JTextField("Mahabage, Sri Lanka", 20), pGbc);
+        pGbc.gridy = 3; pGbc.gridx = 0; pnlProfile.add(new JLabel("License Credential:"), pGbc);
+        pGbc.gridx = 1; pnlProfile.add(new JTextField("WP-B1234567", 20), pGbc);
+
+        // --- CARD 3: RENTAL HISTORY LOG VIEW ---
+        JPanel pnlHistory = new JPanel(new BorderLayout(10, 10));
+        pnlHistory.setBackground(Color.WHITE);
+        pnlHistory.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        JLabel lblHistTitle = new JLabel("Personal Historical System Bookings Ledger", JLabel.LEFT);
+        lblHistTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        pnlHistory.add(lblHistTitle, BorderLayout.NORTH);
+
+        String[] histCols = {"Booking ID", "Vehicle Plate Ref", "Log Recorded Date"};
+        historyModel = new DefaultTableModel(histCols, 0) {
+            @Override
+            public boolean isCellEditable(int r, int c) { return false; }
+        };
+        tblBookingHistory = new JTable(historyModel);
+        tblBookingHistory.setRowHeight(28);
+        pnlHistory.add(new JScrollPane(tblBookingHistory), BorderLayout.CENTER);
+
+        // Add subcomponents into Card stack layout map
+        cardsContainer.add(pnlShowroom, "SHOWROOM");
+        cardsContainer.add(pnlProfile, "PROFILE");
+        cardsContainer.add(pnlHistory, "HISTORY");
+
+        mainPanel.add(cardsContainer, BorderLayout.CENTER);
 
         // ==========================================
-        // ⚡ BACKEND ACTION LISTENERS
+        // ACTION MECHANISMS
         // ==========================================
+        btnShowroomNav.addActionListener(e -> cardLayout.show(cardsContainer, "SHOWROOM"));
+        btnProfileNav.addActionListener(e -> cardLayout.show(cardsContainer, "PROFILE"));
+        btnHistoryNav.addActionListener(e -> {
+            loadBookingHistory();
+            cardLayout.show(cardsContainer, "HISTORY");
+        });
+
         btnBookVehicle.addActionListener(e -> performVehicleBooking());
         btnLogout.addActionListener(e -> {
             new LoginFrame().setVisible(true);
@@ -129,11 +202,8 @@ public class CustomerPortal extends JFrame {
         });
     }
 
-    /**
-     * Dynamically filters and pulls only "Available" vehicles from Clever Cloud MySQL
-     */
     private void loadAvailableVehicles() {
-        tableModel.setRowCount(0); // Wipe stale data views
+        showroomModel.setRowCount(0); 
         String query = "SELECT * FROM vehicles WHERE status = 'Available'";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -141,7 +211,7 @@ public class CustomerPortal extends JFrame {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                tableModel.addRow(new Object[]{
+                showroomModel.addRow(new Object[]{
                     rs.getString("plate_number"),
                     rs.getString("brand"),
                     rs.getString("model"),
@@ -153,49 +223,63 @@ public class CustomerPortal extends JFrame {
         }
     }
 
-    /**
-     * Books a vehicle, updates state to 'Rented', logs transaction to history
-     */
+    private void loadBookingHistory() {
+        historyModel.setRowCount(0);
+        String query = "SELECT * FROM bookings ORDER BY booking_id DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                historyModel.addRow(new Object[]{
+                    rs.getInt("booking_id"),
+                    rs.getString("plate_number"),
+                    rs.getTimestamp("booking_date")
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "History Sync Failed: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void performVehicleBooking() {
         int selectedRow = tblAvailableVehicles.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please choose an available vehicle from the catalogue listing grid.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please choose an available vehicle from the catalog grid.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        String plateNumber = tableModel.getValueAt(selectedRow, 0).toString();
-        String brandAndModel = tableModel.getValueAt(selectedRow, 1).toString() + " " + tableModel.getValueAt(selectedRow, 2).toString();
+        String plateNumber = showroomModel.getValueAt(selectedRow, 0).toString();
+        String brandAndModel = showroomModel.getValueAt(selectedRow, 1).toString() + " " + showroomModel.getValueAt(selectedRow, 2).toString();
 
-        // Transaction handling: Log booking and update status simultaneously
         String bookingQuery = "INSERT INTO bookings (plate_number) VALUES (?)";
         String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Rented' WHERE plate_number = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false); // Enable safe transactional state bounds
+            conn.setAutoCommit(false); 
 
             try (PreparedStatement bookingStmt = conn.prepareStatement(bookingQuery);
                  PreparedStatement vehicleStmt = conn.prepareStatement(vehicleUpdateQuery)) {
 
-                // 1. Log transaction entry
                 bookingStmt.setString(1, plateNumber);
                 bookingStmt.executeUpdate();
 
-                // 2. Change vehicle status so it drops from public showroom catalog
                 vehicleStmt.setString(1, plateNumber);
                 vehicleStmt.executeUpdate();
 
-                conn.commit(); // Push execution batch together safely
-                JOptionPane.showMessageDialog(this, "Reservation Confirmed!\nYou have successfully booked the " + brandAndModel + " (" + plateNumber + ").", "Booking Success", JOptionPane.INFORMATION_MESSAGE);
+                conn.commit(); 
+                JOptionPane.showMessageDialog(this, "Reservation Confirmed! Enjoy your " + brandAndModel, "Booking Success", JOptionPane.INFORMATION_MESSAGE);
                 
-                loadAvailableVehicles(); // Reload dynamic catalog list view immediately
+                loadAvailableVehicles(); 
 
             } catch (SQLException ex) {
-                conn.rollback(); // Undo operations if any segment encounters failure conditions
+                conn.rollback(); 
                 throw ex;
             }
 
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Transaction Processing Interrupted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Transaction Aborted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
