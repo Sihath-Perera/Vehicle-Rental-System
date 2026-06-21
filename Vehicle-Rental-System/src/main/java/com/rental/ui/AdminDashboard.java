@@ -3,21 +3,37 @@ package com.rental.ui;
 import com.rental.config.DatabaseConnection;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AdminDashboard extends JFrame {
 
     private JTable tblVehicles;
     private DefaultTableModel tableModel;
+    private TableRowSorter<DefaultTableModel> tableSorter;
+    
+    // Left Panel Components
+    private JTextField txtSearch;
+    private JComboBox<String> cmbFilterStatus;
+    private JLabel lblTotalCount;
+    private JLabel lblRentedCount;
+    private JLabel lblMaintenanceCount;
+
+    // Right Panel Components (Form)
     private JTextField txtPlateNumber;
     private JTextField txtBrand;
     private JTextField txtModel;
     private JTextField txtDailyRate;
     private JComboBox<String> cmbStatus;
+    
     private JButton btnAddVehicle;
     private JButton btnUpdateStatus;
     private JButton btnLogout;
@@ -30,32 +46,30 @@ public class AdminDashboard extends JFrame {
                     break;
                 }
             }
-        } catch (Exception e) {
-            // Fallback safely to system default
-        }
+        } catch (Exception e) {}
 
         initComponents();
-        loadVehicleData(); // ⚡ Live fetch from Cloud DB on startup!
+        loadVehicleData(); 
     }
 
     private void initComponents() {
         setTitle("Admin Dashboard - Fleet Management Control");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 650);
+        setSize(1150, 680);
         setResizable(false);
         setLocationRelativeTo(null); 
 
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(new Color(244, 246, 249));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         this.setContentPane(mainPanel);
 
         // ==========================================
-        // 1. TOP CONTROL HEADER BANNER
+        // TOP HEADER BANNER
         // ==========================================
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(15, 23, 42)); 
-        topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
 
         JLabel lblAdminTitle = new JLabel("Administrative Control Panel", JLabel.LEFT);
         lblAdminTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -73,7 +87,89 @@ public class AdminDashboard extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // ==========================================
-        // 2. CENTER PANEL: LIVE FLEET MANAGEMENT TABLE
+        // NEW: WEST PANEL (SEARCH, FILTER & METRICS)
+        // ==========================================
+        JPanel westPanel = new JPanel(new GridBagLayout());
+        westPanel.setBackground(Color.WHITE);
+        westPanel.setPreferredSize(new Dimension(260, 0));
+        westPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(230, 233, 238), 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+
+        GridBagConstraints wGbc = new GridBagConstraints();
+        wGbc.fill = GridBagConstraints.HORIZONTAL;
+        wGbc.insets = new Insets(5, 0, 5, 0);
+        wGbc.gridx = 0;
+
+        JLabel lblSearchHeader = new JLabel("Search & Filter Fleet", JLabel.CENTER);
+        lblSearchHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblSearchHeader.setForeground(new Color(15, 23, 42));
+        wGbc.gridy = 0;
+        wGbc.insets = new Insets(0, 0, 10, 0);
+        westPanel.add(lblSearchHeader, wGbc);
+        wGbc.insets = new Insets(4, 0, 4, 0);
+
+        JLabel lblSearch = new JLabel("Live Text Search:");
+        lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        wGbc.gridy = 1;
+        westPanel.add(lblSearch, wGbc);
+
+        txtSearch = new JTextField();
+        txtSearch.setPreferredSize(new Dimension(0, 32));
+        txtSearch.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        wGbc.gridy = 2;
+        westPanel.add(txtSearch, wGbc);
+
+        JLabel lblFilter = new JLabel("Isolate Status:");
+        lblFilter.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        wGbc.gridy = 3;
+        wGbc.insets = new Insets(10, 0, 4, 0);
+        westPanel.add(lblFilter, wGbc);
+        wGbc.insets = new Insets(4, 0, 4, 0);
+
+        cmbFilterStatus = new JComboBox<>(new String[]{"ALL", "Available", "Rented", "Maintenance"});
+        cmbFilterStatus.setPreferredSize(new Dimension(0, 32));
+        cmbFilterStatus.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cmbFilterStatus.setBackground(Color.WHITE);
+        wGbc.gridy = 4;
+        westPanel.add(cmbFilterStatus, wGbc);
+
+        JSeparator westSep = new JSeparator();
+        wGbc.gridy = 5;
+        wGbc.insets = new Insets(15, 0, 15, 0);
+        westPanel.add(westSep, wGbc);
+        wGbc.insets = new Insets(4, 0, 4, 0);
+
+        JLabel lblMetricsTitle = new JLabel("Live Fleet Overview", JLabel.CENTER);
+        lblMetricsTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblMetricsTitle.setForeground(new Color(51, 65, 85));
+        wGbc.gridy = 6;
+        wGbc.insets = new Insets(0, 0, 8, 0);
+        westPanel.add(lblMetricsTitle, wGbc);
+        wGbc.insets = new Insets(4, 0, 4, 0);
+
+        lblTotalCount = new JLabel("Total Registered: 0");
+        lblTotalCount.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        wGbc.gridy = 7;
+        westPanel.add(lblTotalCount, wGbc);
+
+        lblRentedCount = new JLabel("Currently Rented: 0");
+        lblRentedCount.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblRentedCount.setForeground(new Color(37, 99, 235));
+        wGbc.gridy = 8;
+        westPanel.add(lblRentedCount, wGbc);
+
+        lblMaintenanceCount = new JLabel("In Maintenance: 0");
+        lblMaintenanceCount.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblMaintenanceCount.setForeground(new Color(220, 38, 38));
+        wGbc.gridy = 9;
+        westPanel.add(lblMaintenanceCount, wGbc);
+
+        mainPanel.add(westPanel, BorderLayout.WEST);
+
+        // ==========================================
+        // CENTER PANEL: FLEET INVENTORY JTABLE
         // ==========================================
         JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
         centerPanel.setBackground(Color.WHITE);
@@ -90,12 +186,12 @@ public class AdminDashboard extends JFrame {
         String[] columns = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)", "Current Status"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; 
-            }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
 
+        tableSorter = new TableRowSorter<>(tableModel);
         tblVehicles = new JTable(tableModel);
+        tblVehicles.setRowSorter(tableSorter);
         tblVehicles.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         tblVehicles.setRowHeight(28);
         tblVehicles.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -107,31 +203,29 @@ public class AdminDashboard extends JFrame {
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         // ==========================================
-        // 3. EAST PANEL: ADD & MODIFY VEHICLE FORM ENGINE
+        // EAST PANEL: ADD & MODIFY VEHICLE FORM ENGINE
         // ==========================================
         JPanel eastPanel = new JPanel(new GridBagLayout());
         eastPanel.setBackground(Color.WHITE);
-        eastPanel.setPreferredSize(new Dimension(320, 0));
+        eastPanel.setPreferredSize(new Dimension(280, 0));
         eastPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(230, 233, 238), 1),
-                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(6, 0, 6, 0);
+        gbc.insets = new Insets(5, 0, 5, 0);
         gbc.gridx = 0;
 
-        JLabel lblFormHeader = new JLabel("Manage Inventory Vehicle", JLabel.CENTER);
-        lblFormHeader.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        JLabel lblFormHeader = new JLabel("Manage Vehicle Details", JLabel.CENTER);
+        lblFormHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblFormHeader.setForeground(new Color(15, 23, 42));
         gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 12, 0);
+        gbc.insets = new Insets(0, 0, 10, 0);
         eastPanel.add(lblFormHeader, gbc);
-
         gbc.insets = new Insets(3, 0, 3, 0);
 
-        // Plate Input
         JLabel lblPlate = new JLabel("Plate Number:");
         lblPlate.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gbc.gridy = 1;
@@ -139,11 +233,9 @@ public class AdminDashboard extends JFrame {
 
         txtPlateNumber = new JTextField();
         txtPlateNumber.setPreferredSize(new Dimension(0, 32));
-        txtPlateNumber.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         gbc.gridy = 2;
         eastPanel.add(txtPlateNumber, gbc);
 
-        // Brand Input
         JLabel lblBrand = new JLabel("Vehicle Brand:");
         lblBrand.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gbc.gridy = 3;
@@ -151,11 +243,9 @@ public class AdminDashboard extends JFrame {
 
         txtBrand = new JTextField();
         txtBrand.setPreferredSize(new Dimension(0, 32));
-        txtBrand.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         gbc.gridy = 4;
         eastPanel.add(txtBrand, gbc);
 
-        // Model Input
         JLabel lblModel = new JLabel("Vehicle Model:");
         lblModel.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gbc.gridy = 5;
@@ -163,11 +253,9 @@ public class AdminDashboard extends JFrame {
 
         txtModel = new JTextField();
         txtModel.setPreferredSize(new Dimension(0, 32));
-        txtModel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         gbc.gridy = 6;
         eastPanel.add(txtModel, gbc);
 
-        // Price Input
         JLabel lblRate = new JLabel("Daily Rental Rate (LKR):");
         lblRate.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gbc.gridy = 7;
@@ -175,11 +263,9 @@ public class AdminDashboard extends JFrame {
 
         txtDailyRate = new JTextField();
         txtDailyRate.setPreferredSize(new Dimension(0, 32));
-        txtDailyRate.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         gbc.gridy = 8;
         eastPanel.add(txtDailyRate, gbc);
 
-        // Availability State Selector
         JLabel lblStatus = new JLabel("Operational Status:");
         lblStatus.setFont(new Font("Segoe UI", Font.BOLD, 12));
         gbc.gridy = 9;
@@ -187,18 +273,16 @@ public class AdminDashboard extends JFrame {
 
         cmbStatus = new JComboBox<>(new String[]{"Available", "Rented", "Maintenance"});
         cmbStatus.setPreferredSize(new Dimension(0, 32));
-        cmbStatus.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cmbStatus.setBackground(Color.WHITE);
         gbc.gridy = 10;
         eastPanel.add(cmbStatus, gbc);
 
         JSeparator formSep = new JSeparator();
         gbc.gridy = 11;
-        gbc.insets = new Insets(12, 0, 12, 0);
+        gbc.insets = new Insets(10, 0, 10, 0);
         eastPanel.add(formSep, gbc);
-        gbc.insets = new Insets(5, 0, 5, 0);
+        gbc.insets = new Insets(4, 0, 4, 0);
 
-        // Action Buttons
         btnAddVehicle = new JButton("Register New Vehicle");
         btnAddVehicle.setPreferredSize(new Dimension(0, 38));
         btnAddVehicle.setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -221,7 +305,11 @@ public class AdminDashboard extends JFrame {
 
         mainPanel.add(eastPanel, BorderLayout.EAST);
 
-        // ⚡ BACKEND ACTION LISTENERS
+        // ==========================================
+        // WIRE UP HOOKS & CONTROLS
+        // ==========================================
+        setupFilteringLogics();
+
         btnAddVehicle.addActionListener(e -> performVehicleRegistration());
         btnUpdateStatus.addActionListener(e -> performStatusUpdate());
         btnLogout.addActionListener(e -> {
@@ -229,24 +317,67 @@ public class AdminDashboard extends JFrame {
             this.dispose();
         });
         
-        // Listen for table row selection to automatically fill form fields for easy status updates
         tblVehicles.getSelectionModel().addListSelectionListener(e -> {
             int selectedRow = tblVehicles.getSelectedRow();
             if (selectedRow != -1) {
-                txtPlateNumber.setText(tableModel.getValueAt(selectedRow, 0).toString());
-                txtBrand.setText(tableModel.getValueAt(selectedRow, 1).toString());
-                txtModel.setText(tableModel.getValueAt(selectedRow, 2).toString());
-                txtDailyRate.setText(tableModel.getValueAt(selectedRow, 3).toString());
-                cmbStatus.setSelectedItem(tableModel.getValueAt(selectedRow, 4).toString());
+                int modelRow = tblVehicles.convertRowIndexToModel(selectedRow);
+                txtPlateNumber.setText(tableModel.getValueAt(modelRow, 0).toString());
+                txtBrand.setText(tableModel.getValueAt(modelRow, 1).toString());
+                txtModel.setText(tableModel.getValueAt(modelRow, 2).toString());
+                txtDailyRate.setText(tableModel.getValueAt(modelRow, 3).toString());
+                cmbStatus.setSelectedItem(tableModel.getValueAt(modelRow, 4).toString());
             }
         });
     }
 
-    /**
-     * Pulls the latest fleet entries from Clever Cloud and populates JTable dynamically
-     */
+    private void setupFilteringLogics() {
+        DocumentListener searchListener = new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { executeCombinedFilter(); }
+            public void removeUpdate(DocumentEvent e) { executeCombinedFilter(); }
+            public void changedUpdate(DocumentEvent e) { executeCombinedFilter(); }
+        };
+        txtSearch.getDocument().addDocumentListener(searchListener);
+        cmbFilterStatus.addActionListener(e -> executeCombinedFilter());
+    }
+
+    private void executeCombinedFilter() {
+        String textText = txtSearch.getText().trim();
+        String statusText = cmbFilterStatus.getSelectedItem().toString();
+
+        List<RowFilter<Object, Object>> filters = new ArrayList<>();
+        
+        if (!textText.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + textText));
+        }
+        if (!statusText.equals("ALL")) {
+            filters.add(RowFilter.regexFilter("^" + statusText + "$", 4));
+        }
+
+        if (filters.isEmpty()) {
+            tableSorter.setRowFilter(null);
+        } else {
+            tableSorter.setRowFilter(RowFilter.andFilter(filters));
+        }
+    }
+
+    private void recalculateQuickStats() {
+        int total = tableModel.getRowCount();
+        int rented = 0;
+        int maintenance = 0;
+
+        for (int i = 0; i < total; i++) {
+            String stat = tableModel.getValueAt(i, 4).toString();
+            if (stat.equalsIgnoreCase("Rented")) rented++;
+            else if (stat.equalsIgnoreCase("Maintenance")) maintenance++;
+        }
+
+        lblTotalCount.setText("Total Registered: " + total);
+        lblRentedCount.setText("Currently Rented: " + rented);
+        lblMaintenanceCount.setText("In Maintenance: " + maintenance);
+    }
+
     private void loadVehicleData() {
-        tableModel.setRowCount(0); // Clear old entries completely
+        tableModel.setRowCount(0); 
         String query = "SELECT * FROM vehicles";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -262,14 +393,12 @@ public class AdminDashboard extends JFrame {
                     rs.getString("status")
                 });
             }
+            recalculateQuickStats();
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Failed to load vehicles: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    /**
-     * Inserts a completely new vehicle into Clever Cloud MySQL
-     */
     private void performVehicleRegistration() {
         String plate = txtPlateNumber.getText().trim();
         String brand = txtBrand.getText().trim();
@@ -305,16 +434,13 @@ public class AdminDashboard extends JFrame {
             JOptionPane.showMessageDialog(this, "Vehicle registered successfully inside active inventory!");
             
             clearFormFields();
-            loadVehicleData(); // Refresh the grid view dynamically
+            loadVehicleData(); 
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Registration failed: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    /**
-     * Modifies the operational availability status of an existing vehicle
-     */
     private void performStatusUpdate() {
         int selectedRow = tblVehicles.getSelectedRow();
         if (selectedRow == -1) {
@@ -322,7 +448,8 @@ public class AdminDashboard extends JFrame {
             return;
         }
 
-        String plate = tableModel.getValueAt(selectedRow, 0).toString();
+        int modelRow = tblVehicles.convertRowIndexToModel(selectedRow);
+        String plate = tableModel.getValueAt(modelRow, 0).toString();
         String newStatus = cmbStatus.getSelectedItem().toString();
 
         String query = "UPDATE vehicles SET status = ? WHERE plate_number = ?";
@@ -337,7 +464,7 @@ public class AdminDashboard extends JFrame {
             JOptionPane.showMessageDialog(this, "Operational status updated for vehicle: " + plate);
             
             clearFormFields();
-            loadVehicleData(); // Reload fresh grid state
+            loadVehicleData(); 
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Update failed: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
