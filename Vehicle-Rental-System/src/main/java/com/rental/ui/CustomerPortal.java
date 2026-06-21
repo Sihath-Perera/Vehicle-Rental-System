@@ -6,8 +6,12 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.ResultSet; 
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 
 public class CustomerPortal extends JFrame {
 
@@ -19,6 +23,10 @@ public class CustomerPortal extends JFrame {
     private DefaultTableModel showroomModel;
     private JTable tblBookingHistory;
     private DefaultTableModel historyModel;
+    
+    // Date Input Fields
+    private JTextField txtPickupDate;
+    private JTextField txtReturnDate;
     
     private JButton btnBookVehicle;
     private JButton btnLogout;
@@ -41,9 +49,10 @@ public class CustomerPortal extends JFrame {
     private void initComponents() {
         setTitle("Customer Portal - Dashboard Panel");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1050, 620);
-        setResizable(false);
+        setSize(1050, 650);
+        setResizable(true);
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(new Color(244, 246, 249));
@@ -83,9 +92,9 @@ public class CustomerPortal extends JFrame {
                 BorderFactory.createEmptyBorder(20, 15, 20, 15)
         ));
 
-        JButton btnShowroomNav = new JButton("🛒 Vehicle Showroom");
-        JButton btnProfileNav = new JButton("👤 My Profile Info");
-        JButton btnHistoryNav = new JButton("📜 Rental History Log");
+        JButton btnShowroomNav = new JButton("Vehicle Showroom");
+        JButton btnProfileNav = new JButton("My Profile Info");
+        JButton btnHistoryNav = new JButton("Rental History Log");
 
         JButton[] navButtons = {btnShowroomNav, btnProfileNav, btnHistoryNav};
         for (JButton btn : navButtons) {
@@ -126,18 +135,39 @@ public class CustomerPortal extends JFrame {
         tblAvailableVehicles.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         pnlShowroom.add(new JScrollPane(tblAvailableVehicles), BorderLayout.CENTER);
 
-        JPanel southActionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // Booking Parameters Form Panel (Bottom of Showroom View)
+        JPanel southActionPanel = new JPanel(new BorderLayout(10, 5));
         southActionPanel.setBackground(Color.WHITE);
-        btnBookVehicle = new JButton("Confirm Booking Reservation");
-        btnBookVehicle.setPreferredSize(new Dimension(240, 40));
+        southActionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+
+        JPanel inputsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
+        inputsPanel.setBackground(Color.WHITE);
+
+        String defaultTodayStr = LocalDate.now().toString(); 
+
+        inputsPanel.add(new JLabel("Pickup Date (YYYY-MM-DD):"));
+        txtPickupDate = new JTextField(defaultTodayStr, 10);
+        txtPickupDate.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        inputsPanel.add(txtPickupDate);
+
+        inputsPanel.add(new JLabel("Return Date (YYYY-MM-DD):"));
+        txtReturnDate = new JTextField(10);
+        txtReturnDate.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        inputsPanel.add(txtReturnDate);
+
+        southActionPanel.add(inputsPanel, BorderLayout.WEST);
+
+        btnBookVehicle = new JButton("Place Pending Order");
+        btnBookVehicle.setPreferredSize(new Dimension(200, 40));
         btnBookVehicle.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnBookVehicle.setBackground(new Color(22, 163, 74));
         btnBookVehicle.setForeground(Color.WHITE);
         btnBookVehicle.setFocusPainted(false);
-        southActionPanel.add(btnBookVehicle);
+        southActionPanel.add(btnBookVehicle, BorderLayout.EAST);
+        
         pnlShowroom.add(southActionPanel, BorderLayout.SOUTH);
 
-        // --- CARD 2: MY PROFILE CUSTOM DASHBOARD VIEW ---
+        // --- CARD 2: MY PROFILE DASHBOARD VIEW ---
         JPanel pnlProfile = new JPanel(new GridBagLayout());
         pnlProfile.setBackground(Color.WHITE);
         pnlProfile.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -169,7 +199,7 @@ public class CustomerPortal extends JFrame {
         lblHistTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
         pnlHistory.add(lblHistTitle, BorderLayout.NORTH);
 
-        String[] histCols = {"Booking ID", "Vehicle Plate Ref", "Log Recorded Date"};
+        String[] histCols = {"Booking ID", "Vehicle Plate Ref", "Pickup Date", "Return Date", "Order Status"};
         historyModel = new DefaultTableModel(histCols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
@@ -178,7 +208,6 @@ public class CustomerPortal extends JFrame {
         tblBookingHistory.setRowHeight(28);
         pnlHistory.add(new JScrollPane(tblBookingHistory), BorderLayout.CENTER);
 
-        // Add subcomponents into Card stack layout map
         cardsContainer.add(pnlShowroom, "SHOWROOM");
         cardsContainer.add(pnlProfile, "PROFILE");
         cardsContainer.add(pnlHistory, "HISTORY");
@@ -219,13 +248,13 @@ public class CustomerPortal extends JFrame {
                 });
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Error fetching catalog items: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error fetching showroom items: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void loadBookingHistory() {
         historyModel.setRowCount(0);
-        String query = "SELECT * FROM bookings ORDER BY booking_id DESC";
+        String query = "SELECT booking_id, plate_number, pickup_date, return_date, booking_status FROM bookings ORDER BY booking_id DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query);
@@ -235,7 +264,9 @@ public class CustomerPortal extends JFrame {
                 historyModel.addRow(new Object[]{
                     rs.getInt("booking_id"),
                     rs.getString("plate_number"),
-                    rs.getTimestamp("booking_date")
+                    rs.getDate("pickup_date"),
+                    rs.getDate("return_date"),
+                    rs.getString("booking_status")
                 });
             }
         } catch (SQLException e) {
@@ -246,15 +277,60 @@ public class CustomerPortal extends JFrame {
     private void performVehicleBooking() {
         int selectedRow = tblAvailableVehicles.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please choose an available vehicle from the catalog grid.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please choose a vehicle from the catalog grid layout.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String pickupStr = txtPickupDate.getText().trim();
+        String returnStr = txtReturnDate.getText().trim();
+
+        if (pickupStr.isEmpty() || returnStr.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill out both the Pickup and Return dates.", "Missing Parameters", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // --- ⚡ BUSINESS GUARDRAILS & DATE VALIDATION LOGIC ---
+        LocalDate today = LocalDate.now();
+        LocalDate pickupDate;
+        LocalDate returnDate;
+        
+        // Fixed: Pattern string matches standard formatting requirements
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        try {
+            // Fixed: Explicitly passing the formatter reference to avoid parser mismatches
+            pickupDate = LocalDate.parse(pickupStr, formatter);
+            returnDate = LocalDate.parse(returnStr, formatter);
+        } catch (DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this, "Invalid Date Format! Please type using YYYY-MM-DD syntax.", "Formatting Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (pickupDate.isBefore(today)) {
+            JOptionPane.showMessageDialog(this, "Pickup date cannot be placed in the past.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!returnDate.isAfter(pickupDate)) {
+            JOptionPane.showMessageDialog(this, "Return date must take place at least one day after your pickup timestamp.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // CRITICAL 3-DAY ADVANCED BOOKING LIMIT GUARDRAIL
+        long daysInAdvance = ChronoUnit.DAYS.between(today, pickupDate);
+        if (daysInAdvance > 3) {
+            JOptionPane.showMessageDialog(this, 
+                "Booking Blocked! You can only reserve vehicles up to 3 days in advance.\n" +
+                "This ensures equal fleet accessibility. Selected date is " + daysInAdvance + " days out.", 
+                "Queue Safety Violation", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         String plateNumber = showroomModel.getValueAt(selectedRow, 0).toString();
         String brandAndModel = showroomModel.getValueAt(selectedRow, 1).toString() + " " + showroomModel.getValueAt(selectedRow, 2).toString();
 
-        String bookingQuery = "INSERT INTO bookings (plate_number) VALUES (?)";
-        String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Rented' WHERE plate_number = ?";
+        String bookingQuery = "INSERT INTO bookings (plate_number, pickup_date, return_date, booking_status) VALUES (?, ?, ?, 'Pending')";
+        String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Ordered' WHERE plate_number = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false); 
@@ -263,14 +339,21 @@ public class CustomerPortal extends JFrame {
                  PreparedStatement vehicleStmt = conn.prepareStatement(vehicleUpdateQuery)) {
 
                 bookingStmt.setString(1, plateNumber);
+                bookingStmt.setDate(2, java.sql.Date.valueOf(pickupDate));
+                bookingStmt.setDate(3, java.sql.Date.valueOf(returnDate));
                 bookingStmt.executeUpdate();
 
+                // Changes state to 'Ordered' so it drops from other customer screens
                 vehicleStmt.setString(1, plateNumber);
                 vehicleStmt.executeUpdate();
 
                 conn.commit(); 
-                JOptionPane.showMessageDialog(this, "Reservation Confirmed! Enjoy your " + brandAndModel, "Booking Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, 
+                    "Order Placed Successfully!\nYour reservation for " + brandAndModel + " is now pending.\n" +
+                    "Please visit the store on " + pickupStr + " to complete verification and collect your vehicle.", 
+                    "Order Logged", JOptionPane.INFORMATION_MESSAGE);
                 
+                txtReturnDate.setText(""); 
                 loadAvailableVehicles(); 
 
             } catch (SQLException ex) {
