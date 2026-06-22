@@ -16,9 +16,17 @@ import java.util.List;
 
 public class AdminDashboard extends JFrame {
 
+    // Tab 1: Fleet Management Components
     private JTable tblVehicles;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> tableSorter;
+    
+    // Tab 2: New Booking Management Components
+    private JTable tblBookings;
+    private DefaultTableModel adminHistoryModel;
+    private JButton btnApprove;
+    private JButton btnReject;
+    private JButton btnCompleteReturn;
     
     // Left Panel Components
     private JTextField txtSearch;
@@ -50,6 +58,7 @@ public class AdminDashboard extends JFrame {
 
         initComponents();
         loadVehicleData(); 
+        loadAdminBookingHistory(); // Added: Syncs booking requests on startup
     }
 
     private void initComponents() {
@@ -59,7 +68,6 @@ public class AdminDashboard extends JFrame {
 
         setResizable(true);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
-       
 
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(new Color(244, 246, 249));
@@ -89,7 +97,7 @@ public class AdminDashboard extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // ==========================================
-        // NEW: WEST PANEL (SEARCH, FILTER & METRICS)
+        // WEST PANEL (SEARCH, FILTER & METRICS)
         // ==========================================
         JPanel westPanel = new JPanel(new GridBagLayout());
         westPanel.setBackground(Color.WHITE);
@@ -170,20 +178,21 @@ public class AdminDashboard extends JFrame {
 
         mainPanel.add(westPanel, BorderLayout.WEST);
 
-        // ==========================================
-        // CENTER PANEL: FLEET INVENTORY JTABLE
-        // ==========================================
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.setBackground(Color.WHITE);
-        centerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(230, 233, 238), 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+        // =========================================================
+        // WORKSPACE WORKFLOW LAYER: CENTRAL TABBED WRAPPER
+        // =========================================================
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        // --- TAB 1: FLEET INVENTORY PANEL ---
+        JPanel fleetTabPanel = new JPanel(new BorderLayout(10, 10));
+        fleetTabPanel.setBackground(Color.WHITE);
+        fleetTabPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         JLabel lblTableTitle = new JLabel("Global System Fleet Inventory", JLabel.LEFT);
         lblTableTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblTableTitle.setForeground(new Color(51, 65, 85));
-        centerPanel.add(lblTableTitle, BorderLayout.NORTH);
+        fleetTabPanel.add(lblTableTitle, BorderLayout.NORTH);
 
         String[] columns = {"Plate Number", "Brand", "Model", "Daily Rate (LKR)", "Current Status"};
         tableModel = new DefaultTableModel(columns, 0) {
@@ -200,9 +209,69 @@ public class AdminDashboard extends JFrame {
         tblVehicles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JScrollPane tableScrollPane = new JScrollPane(tblVehicles);
-        centerPanel.add(tableScrollPane, BorderLayout.CENTER);
+        fleetTabPanel.add(tableScrollPane, BorderLayout.CENTER);
+        tabbedPane.addTab("Fleet Inventory Log", fleetTabPanel);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        // --- TAB 2: RENTAL ORDERS & ACTIONS PANEL ---
+        JPanel bookingsTabPanel = new JPanel(new BorderLayout(15, 15));
+        bookingsTabPanel.setBackground(Color.WHITE);
+        bookingsTabPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JLabel lblBookingsTitle = new JLabel("Live Booking Requests & Pipeline Processing", JLabel.LEFT);
+        lblBookingsTitle.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblBookingsTitle.setForeground(new Color(51, 65, 85));
+        bookingsTabPanel.add(lblBookingsTitle, BorderLayout.NORTH);
+
+        String[] bookingColumns = {"Booking ID", "Plate Number", "Pickup Date", "Return Date", "Order Status"};
+        adminHistoryModel = new DefaultTableModel(bookingColumns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+
+        tblBookings = new JTable(adminHistoryModel);
+        tblBookings.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tblBookings.setRowHeight(28);
+        tblBookings.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tblBookings.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JScrollPane bookingsScrollPane = new JScrollPane(tblBookings);
+        bookingsTabPanel.add(bookingsScrollPane, BorderLayout.CENTER);
+
+        // Grid Action Panel for State Machine Buttons
+        JPanel bookingActionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        bookingActionPanel.setBackground(Color.WHITE);
+
+        btnApprove = new JButton("Approve Reservation");
+        btnApprove.setPreferredSize(new Dimension(170, 38));
+        btnApprove.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnApprove.setBackground(new Color(22, 163, 74));
+        btnApprove.setForeground(Color.WHITE);
+        btnApprove.setFocusPainted(false);
+        btnApprove.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btnReject = new JButton("Reject Request");
+        btnReject.setPreferredSize(new Dimension(140, 38));
+        btnReject.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnReject.setBackground(new Color(220, 38, 38));
+        btnReject.setForeground(Color.WHITE);
+        btnReject.setFocusPainted(false);
+        btnReject.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btnCompleteReturn = new JButton("Finalize Car Return");
+        btnCompleteReturn.setPreferredSize(new Dimension(170, 38));
+        btnCompleteReturn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnCompleteReturn.setBackground(new Color(37, 99, 235));
+        btnCompleteReturn.setForeground(Color.WHITE);
+        btnCompleteReturn.setFocusPainted(false);
+        btnCompleteReturn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        bookingActionPanel.add(btnApprove);
+        bookingActionPanel.add(btnReject);
+        bookingActionPanel.add(btnCompleteReturn);
+        bookingsTabPanel.add(bookingActionPanel, BorderLayout.SOUTH);
+
+        tabbedPane.addTab("Rental Orders & Actions", bookingsTabPanel);
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
         // ==========================================
         // EAST PANEL: ADD & MODIFY VEHICLE FORM ENGINE
@@ -273,7 +342,7 @@ public class AdminDashboard extends JFrame {
         gbc.gridy = 9;
         eastPanel.add(lblStatus, gbc);
 
-        cmbStatus = new JComboBox<>(new String[]{"Available", "Rented", "Maintenance"});
+        cmbStatus = new JComboBox<>(new String[]{"Available", "Rented", "Maintenance", "Ordered"});
         cmbStatus.setPreferredSize(new Dimension(0, 32));
         cmbStatus.setBackground(Color.WHITE);
         gbc.gridy = 10;
@@ -330,6 +399,54 @@ public class AdminDashboard extends JFrame {
                 cmbStatus.setSelectedItem(tableModel.getValueAt(modelRow, 4).toString());
             }
         });
+
+        // --- ACTION LISTENERS FOR PIPELINE PROCESSING BUTTONS ---
+        btnApprove.addActionListener(e -> {
+            int selectedRow = tblBookings.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a pending reservation from the table grid first.", "Selection Missing", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int bookingId = Integer.parseInt(adminHistoryModel.getValueAt(selectedRow, 0).toString());
+            String currentStatus = adminHistoryModel.getValueAt(selectedRow, 4).toString();
+            if (!currentStatus.equalsIgnoreCase("Pending")) {
+                JOptionPane.showMessageDialog(this, "Action Blocked! You can only approve entries that are currently 'Pending'.", "Invalid Action", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            approveBooking(bookingId);
+        });
+
+        btnReject.addActionListener(e -> {
+            int selectedRow = tblBookings.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select an entry from the grid layout to reject.", "Selection Missing", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int bookingId = Integer.parseInt(adminHistoryModel.getValueAt(selectedRow, 0).toString());
+            String plateNumber = adminHistoryModel.getValueAt(selectedRow, 1).toString();
+            String currentStatus = adminHistoryModel.getValueAt(selectedRow, 4).toString();
+            if (!currentStatus.equalsIgnoreCase("Pending")) {
+                JOptionPane.showMessageDialog(this, "Only 'Pending' requests can be actively rejected.", "Invalid Action", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            processVehicleReleaseOrReturn(bookingId, plateNumber, "Cancelled");
+        });
+
+        btnCompleteReturn.addActionListener(e -> {
+            int selectedRow = tblBookings.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Select the active running rental being returned to the garage.", "Selection Missing", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int bookingId = Integer.parseInt(adminHistoryModel.getValueAt(selectedRow, 0).toString());
+            String plateNumber = adminHistoryModel.getValueAt(selectedRow, 1).toString();
+            String currentStatus = adminHistoryModel.getValueAt(selectedRow, 4).toString();
+            if (!currentStatus.equalsIgnoreCase("Approved")) {
+                JOptionPane.showMessageDialog(this, "You can only close out rentals that are actively 'Approved'.", "Invalid Action", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            processVehicleReleaseOrReturn(bookingId, plateNumber, "Completed");
+        });
     }
 
     private void setupFilteringLogics() {
@@ -369,12 +486,12 @@ public class AdminDashboard extends JFrame {
 
         for (int i = 0; i < total; i++) {
             String stat = tableModel.getValueAt(i, 4).toString();
-            if (stat.equalsIgnoreCase("Rented")) rented++;
+            if (stat.equalsIgnoreCase("Rented") || stat.equalsIgnoreCase("Ordered")) rented++;
             else if (stat.equalsIgnoreCase("Maintenance")) maintenance++;
         }
 
         lblTotalCount.setText("Total Registered: " + total);
-        lblRentedCount.setText("Currently Rented: " + rented);
+        lblRentedCount.setText("Currently Active: " + rented);
         lblMaintenanceCount.setText("In Maintenance: " + maintenance);
     }
 
@@ -470,6 +587,81 @@ public class AdminDashboard extends JFrame {
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this, "Update failed: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void approveBooking(int bookingId) {
+        String query = "UPDATE bookings SET booking_status = 'Approved' WHERE booking_id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setInt(1, bookingId);
+            int rowsUpdated = pstmt.executeUpdate();
+            
+            if (rowsUpdated > 0) {
+                JOptionPane.showMessageDialog(this, "Reservation ID " + bookingId + " has been successfully APPROVED.", "Status Updated", JOptionPane.INFORMATION_MESSAGE);
+                loadAdminBookingHistory(); 
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadAdminBookingHistory() {
+        adminHistoryModel.setRowCount(0); 
+        String query = "SELECT booking_id, plate_number, pickup_date, return_date, booking_status FROM bookings ORDER BY booking_id DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                adminHistoryModel.addRow(new Object[]{
+                    rs.getInt("booking_id"),
+                    rs.getString("plate_number"),
+                    rs.getDate("pickup_date"),
+                    rs.getDate("return_date"),
+                    rs.getString("booking_status")
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Admin Table Sync Failed: " + e.getMessage(), 
+                                          "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void processVehicleReleaseOrReturn(int bookingId, String plateNumber, String targetBookingStatus) {
+        String bookingQuery = "UPDATE bookings SET booking_status = ? WHERE booking_id = ?";
+        String vehicleQuery = "UPDATE vehicles SET status = 'Available' WHERE plate_number = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false); 
+
+            try (PreparedStatement bookingStmt = conn.prepareStatement(bookingQuery);
+                 PreparedStatement vehicleStmt = conn.prepareStatement(vehicleQuery)) {
+
+                bookingStmt.setString(1, targetBookingStatus);
+                bookingStmt.setInt(2, bookingId);
+                bookingStmt.executeUpdate();
+
+                vehicleStmt.setString(1, plateNumber);
+                vehicleStmt.executeUpdate();
+
+                conn.commit(); 
+
+                String msg = targetBookingStatus.equals("Completed") ? "Vehicle return logged. Transaction finalized." : "Reservation rejected. Fleet item freed.";
+                JOptionPane.showMessageDialog(this, msg, "Process Success", JOptionPane.INFORMATION_MESSAGE);
+
+                loadAdminBookingHistory(); 
+                loadVehicleData(); // Synchronizes the inventory metrics tab seamlessly!
+
+            } catch (SQLException ex) {
+                conn.rollback();
+                throw ex;
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Transaction Aborted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
