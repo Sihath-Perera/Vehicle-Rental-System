@@ -55,9 +55,11 @@ public class AdminDashboard extends JFrame {
     private void initComponents() {
         setTitle("Admin Dashboard - Fleet Management Control");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1150, 680);
-        setResizable(false);
-        setLocationRelativeTo(null); 
+        setSize(1150, 680); 
+
+        setResizable(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+       
 
         JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
         mainPanel.setBackground(new Color(244, 246, 249));
