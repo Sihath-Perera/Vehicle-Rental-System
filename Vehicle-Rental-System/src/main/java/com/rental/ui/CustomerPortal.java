@@ -275,65 +275,96 @@ public class CustomerPortal extends JFrame {
     }
 
     private void performVehicleBooking() {
-        int selectedRow = tblAvailableVehicles.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please choose a vehicle from the catalog grid layout.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    int selectedRow = tblAvailableVehicles.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Please choose a vehicle from the catalog grid layout.", "No Car Selected", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        String pickupStr = txtPickupDate.getText().trim();
-        String returnStr = txtReturnDate.getText().trim();
+    String pickupStr = txtPickupDate.getText().trim();
+    String returnStr = txtReturnDate.getText().trim();
 
-        if (pickupStr.isEmpty() || returnStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill out both the Pickup and Return dates.", "Missing Parameters", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    if (pickupStr.isEmpty() || returnStr.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Please fill out both the Pickup and Return dates.", "Missing Parameters", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        // --- ⚡ BUSINESS GUARDRAILS & DATE VALIDATION LOGIC ---
-        LocalDate today = LocalDate.now();
-        LocalDate pickupDate;
-        LocalDate returnDate;
-        
-        // Fixed: Pattern string matches standard formatting requirements
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    // --- ⚡ BUSINESS GUARDRAILS & DATE VALIDATION LOGIC ---
+    LocalDate today = LocalDate.now();
+    LocalDate pickupDate;
+    LocalDate returnDate;
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-        try {
-            // Fixed: Explicitly passing the formatter reference to avoid parser mismatches
-            pickupDate = LocalDate.parse(pickupStr, formatter);
-            returnDate = LocalDate.parse(returnStr, formatter);
-        } catch (DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid Date Format! Please type using YYYY-MM-DD syntax.", "Formatting Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    try {
+        pickupDate = LocalDate.parse(pickupStr, formatter);
+        returnDate = LocalDate.parse(returnStr, formatter);
+    } catch (DateTimeParseException ex) {
+        JOptionPane.showMessageDialog(this, "Invalid Date Format! Please type using YYYY-MM-DD syntax.", "Formatting Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
 
-        if (pickupDate.isBefore(today)) {
-            JOptionPane.showMessageDialog(this, "Pickup date cannot be placed in the past.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    if (pickupDate.isBefore(today)) {
+        JOptionPane.showMessageDialog(this, "Pickup date cannot be placed in the past.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        if (!returnDate.isAfter(pickupDate)) {
-            JOptionPane.showMessageDialog(this, "Return date must take place at least one day after your pickup timestamp.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    if (!returnDate.isAfter(pickupDate)) {
+        JOptionPane.showMessageDialog(this, "Return date must take place at least one day after your pickup timestamp.", "Logistics Rule Exception", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        // CRITICAL 3-DAY ADVANCED BOOKING LIMIT GUARDRAIL
-        long daysInAdvance = ChronoUnit.DAYS.between(today, pickupDate);
-        if (daysInAdvance > 3) {
-            JOptionPane.showMessageDialog(this, 
-                "Booking Blocked! You can only reserve vehicles up to 3 days in advance.\n" +
-                "This ensures equal fleet accessibility. Selected date is " + daysInAdvance + " days out.", 
-                "Queue Safety Violation", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    // CRITICAL 3-DAY ADVANCED BOOKING LIMIT GUARDRAIL
+    long daysInAdvance = ChronoUnit.DAYS.between(today, pickupDate);
+    if (daysInAdvance > 3) {
+        JOptionPane.showMessageDialog(this, 
+            "Booking Blocked! You can only reserve vehicles up to 3 days in advance.\n" +
+            "This ensures equal fleet accessibility. Selected date is " + daysInAdvance + " days out.", 
+            "Queue Safety Violation", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
 
-        String plateNumber = showroomModel.getValueAt(selectedRow, 0).toString();
-        String brandAndModel = showroomModel.getValueAt(selectedRow, 1).toString() + " " + showroomModel.getValueAt(selectedRow, 2).toString();
+    // =========================================================
+    // 📊 NEW: LIVE BILL CALCULATION ENGINE
+    // =========================================================
+    String plateNumber = showroomModel.getValueAt(selectedRow, 0).toString();
+    String brandAndModel = showroomModel.getValueAt(selectedRow, 1).toString() + " " + showroomModel.getValueAt(selectedRow, 2).toString();
+    
+    // Extract the daily rate from the JTable cell
+    double dailyRate = Double.parseDouble(showroomModel.getValueAt(selectedRow, 3).toString());
+    
+    // Compute exact delta days
+    long totalDays = ChronoUnit.DAYS.between(pickupDate, returnDate);
+    double totalCost = totalDays * dailyRate;
 
-        String bookingQuery = "INSERT INTO bookings (plate_number, pickup_date, return_date, booking_status) VALUES (?, ?, ?, 'Pending')";
-        String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Ordered' WHERE plate_number = ?";
+    // Build a styled, professional Invoice Summary Panel
+    String invoiceSummary = String.format(
+        "📄 RENTAL RESERVATION SUMMARY\n" +
+        "-----------------------------------------------\n" +
+        "Vehicle: %s\n" +
+        "Plate Number: %s\n" +
+        "Duration: %d Days\n" +
+        "Timeline: From %s to %s\n\n" +
+        "Daily Standard Rate: %,.2f LKR\n" +
+        "ESTIMATED TOTAL DUE: %,.2f LKR\n" +
+        "-----------------------------------------------\n" +
+        "Would you like to place this pending order request?",
+        brandAndModel, plateNumber, totalDays, pickupStr, returnStr, dailyRate, totalCost
+    );
 
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            conn.setAutoCommit(false); 
+    // Prompt user to confirm before hitting Clever Cloud
+    int userChoice = JOptionPane.showConfirmDialog(this, invoiceSummary, "Confirm Order & Estimated Bill", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
+    
+    if (userChoice != JOptionPane.YES_OPTION) {
+        JOptionPane.showMessageDialog(this, "Reservation cancelled by user.", "Order Aborted", JOptionPane.WARNING_MESSAGE);
+        return; // Break execution immediately out of the method
+    }
+    // =========================================================
+
+    String bookingQuery = "INSERT INTO bookings (plate_number, pickup_date, return_date, booking_status) VALUES (?, ?, ?, 'Pending')";
+    String vehicleUpdateQuery = "UPDATE vehicles SET status = 'Ordered' WHERE plate_number = ?";
+
+    try (Connection conn = DatabaseConnection.getConnection()) {
+        conn.setAutoCommit(false); 
 
             try (PreparedStatement bookingStmt = conn.prepareStatement(bookingQuery);
                  PreparedStatement vehicleStmt = conn.prepareStatement(vehicleUpdateQuery)) {
@@ -361,10 +392,10 @@ public class CustomerPortal extends JFrame {
                 throw ex;
             }
 
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(this, "Transaction Aborted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
-        }
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(this, "Transaction Aborted: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
     }
+}
 
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(() -> new CustomerPortal().setVisible(true));
