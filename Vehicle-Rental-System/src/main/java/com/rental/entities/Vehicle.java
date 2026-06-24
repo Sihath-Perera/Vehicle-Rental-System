@@ -4,12 +4,17 @@
  */
 package com.rental.entities;
 
+/**
+ * Core Data Entity encapsulating vehicle attributes, daily rates, and operational states.
+ * Maps directly to rows in the 'vehicles' table.
+ * * @author Sihath
+ */
 public class Vehicle {
     private String plateNumber;
     private String brand;
     private String model;
     private double dailyRate;
-    private String status; // "Available" or "Rented"
+    private String status; // "Available", "Rented", "Maintenance"
 
     public Vehicle(String plateNumber, String brand, String model, double dailyRate, String status) {
         this.plateNumber = plateNumber;
@@ -19,7 +24,10 @@ public class Vehicle {
         this.status = status;
     }
 
-    // Getters and Setters
+    // ============================================================
+    // GETTERS AND SETTERS (Encapsulation Principles)
+    // ============================================================
+
     public String getPlateNumber() { return plateNumber; }
     public void setPlateNumber(String plateNumber) { this.plateNumber = plateNumber; }
 
