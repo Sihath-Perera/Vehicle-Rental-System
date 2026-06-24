@@ -1,15 +1,31 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.rental.ui;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.print.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * Premium Printable Invoice Display Dialog Component.
+ * Bypasses local frame buttons to send pristine canvas tables directly to OS Spoolers.
+ * * @author Pathum Srinath
+ */
 public class InvoiceDialog extends JDialog {
 
     private JPanel printablePanel;
@@ -38,13 +54,13 @@ public class InvoiceDialog extends JDialog {
         setLocationRelativeTo(getOwner());
         getContentPane().setLayout(new BorderLayout());
 
-        // --- 1. THE PRINTABLE RECEIPT PANEL ---
+        // --- 1. THE PRINTABLE RECEIPT CANVAS ---
         printablePanel = new JPanel();
         printablePanel.setBackground(Color.WHITE);
         printablePanel.setLayout(new BoxLayout(printablePanel, BoxLayout.Y_AXIS));
         printablePanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
-        // Company Header
+        // Corporate Branding Elements
         JLabel lblCompany = new JLabel("DRIVEFLOW RENTALS");
         lblCompany.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblCompany.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -55,12 +71,11 @@ public class InvoiceDialog extends JDialog {
         lblTagline.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblTagline.setForeground(new Color(100, 116, 139));
 
-        // Divider Line
         JLabel lblDivider1 = new JLabel("-------------------------------------------------------------------------");
         lblDivider1.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblDivider1.setForeground(Color.LIGHT_GRAY);
 
-        // Invoice Metadata
+        // Meta Transaction Details Grid
         JPanel metaPanel = new JPanel(new GridLayout(2, 2, 5, 5));
         metaPanel.setBackground(Color.WHITE);
         metaPanel.setMaximumSize(new Dimension(400, 50));
@@ -75,7 +90,7 @@ public class InvoiceDialog extends JDialog {
         lblDivider2.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblDivider2.setForeground(Color.LIGHT_GRAY);
 
-        // Transaction Details Table Simulation
+        // Ledger Pricing Calculations Table Layout
         JPanel tablePanel = new JPanel(new GridBagLayout());
         tablePanel.setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
@@ -83,14 +98,14 @@ public class InvoiceDialog extends JDialog {
         gbc.weightx = 1.0;
         gbc.insets = new Insets(6, 0, 6, 0);
 
-        // Table Headers
+        // Section Form headers
         gbc.gridy = 0;
         gbc.gridx = 0; tablePanel.add(createBoldLabel("Description"), gbc);
         gbc.gridx = 1; tablePanel.add(createBoldLabel("Rate"), gbc);
         gbc.gridx = 2; tablePanel.add(createBoldLabel("Days"), gbc);
         gbc.gridx = 3; tablePanel.add(createBoldLabel("Total"), gbc);
 
-        // Table Row (Vehicle Rental)
+        // Core dynamic metrics values insertion mapping
         gbc.gridy = 1;
         gbc.gridx = 0; tablePanel.add(new JLabel(vehicleName), gbc);
         gbc.gridx = 1; tablePanel.add(new JLabel("LKR " + String.format("%.2f", ratePerDay)), gbc);
@@ -101,7 +116,7 @@ public class InvoiceDialog extends JDialog {
         lblDivider3.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblDivider3.setForeground(Color.LIGHT_GRAY);
 
-        // Total Summary Section
+        // Bottom Accounting Line
         JPanel summaryPanel = new JPanel(new BorderLayout());
         summaryPanel.setBackground(Color.WHITE);
         summaryPanel.setMaximumSize(new Dimension(400, 40));
@@ -113,13 +128,12 @@ public class InvoiceDialog extends JDialog {
         summaryPanel.add(lblTotalText, BorderLayout.WEST);
         summaryPanel.add(lblTotalVal, BorderLayout.EAST);
 
-        // Footer Thank You
         JLabel lblFooter = new JLabel("Thank you for riding with us!");
         lblFooter.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblFooter.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblFooter.setForeground(new Color(71, 85, 105));
 
-        // Assemble printable area
+        // Assemble Canvas Area layout
         printablePanel.add(lblCompany);
         printablePanel.add(Box.createVerticalStrut(4));
         printablePanel.add(lblTagline);
@@ -138,7 +152,7 @@ public class InvoiceDialog extends JDialog {
         scrollPane.setBorder(null);
         getContentPane().add(scrollPane, BorderLayout.CENTER);
 
-        // --- 2. THE CONTROL BUTTON PANEL (NOT PRINTED) ---
+        // --- 2. CONTROL HUD PANEL INTERFACE (NOT PRINTED ON EXPORT) ---
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(new Color(241, 245, 249));
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY));
@@ -156,7 +170,7 @@ public class InvoiceDialog extends JDialog {
         buttonPanel.add(btnClose);
         getContentPane().add(buttonPanel, BorderLayout.SOUTH);
 
-        // --- ACTION CONTROLS ---
+        // Functional Button Trigger Listeners
         btnClose.addActionListener(e -> dispose());
         btnPrint.addActionListener(e -> spoolPrintJob());
     }
@@ -167,7 +181,6 @@ public class InvoiceDialog extends JDialog {
         return label;
     }
 
-    // Spools the active panel layout components directly into the OS Print Manager
     private void spoolPrintJob() {
         PrinterJob job = PrinterJob.getPrinterJob();
         job.setJobName("DriveFlow_Invoice_" + bookingId);
@@ -176,27 +189,22 @@ public class InvoiceDialog extends JDialog {
             @Override
             public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) throws PrinterException {
                 if (pageIndex > 0) {
-                    return Printable.NO_SUCH_PAGE; // Stop after page 1
+                    return Printable.NO_SUCH_PAGE;
                 }
 
                 Graphics2D g2d = (Graphics2D) graphics;
-                // Move origin point to avoid non-printable page edge margins
                 g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 
-                // Component scaling engine to map the UI perfectly onto a standard letter/A4 sheet width
+                // Scale system down uniformly to print layout size definitions safely on A4 dimensions
                 double scaleX = pageFormat.getImageableWidth() / printablePanel.getWidth();
-                // Maintain proportions or cap layout bounds smoothly
                 double scale = Math.min(scaleX, 1.0);
                 g2d.scale(scale, scale);
 
-                // Paint the exact state of our panel canvas directly into the graphic print stream
                 printablePanel.printAll(g2d);
-
                 return Printable.PAGE_EXISTS;
             }
         });
 
-        // Summons the physical native platform print wizard
         if (job.printDialog()) {
             try {
                 job.print();
@@ -208,4 +216,3 @@ public class InvoiceDialog extends JDialog {
         }
     }
 }
-
