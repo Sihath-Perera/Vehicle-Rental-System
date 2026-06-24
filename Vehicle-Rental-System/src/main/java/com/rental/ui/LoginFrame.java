@@ -1,346 +1,203 @@
 package com.rental.ui;
 
-import com.rental.config.DatabaseConnection;
 import com.rental.controller.RentalController;
 import com.rental.entities.User;
-import com.rental.entities.Vehicle;
+import com.rental.entities.Customer; // Added the Customer import
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.sql.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
 
-public class AdminDashboard extends JFrame {
-    private User adminUser;
+/**
+ * Customer Authentication System interface.
+ * Implements the DriveFlow single-column card design.
+ * @author 
+ */
+public class LoginFrame extends JFrame {
     private RentalController controller;
-
-    // UI Components
-    private JTabbedPane tabbedPane;
-    private DefaultTableModel vehicleModel, pendingModel, paymentModel, activeRentalsModel;
-    private JTable vehicleTable, pendingTable, paymentTable, activeRentalsTable;
+    private JTextField txtUsername;
+    private JPasswordField txtPassword;
+    private JButton btnLogin;
+    private JButton btnGoToRegister;
     
-    // Input Fields
-    private JTextField txtPlate, txtBrand, txtModel, txtRate;
-    private JTextField txtReturnRentalId, txtReturnPlate, txtDelayDays, txtLateFee;
-    private JComboBox<String> cmbCondition;
-    private JComboBox<String> cmbPaymentMethod; // Added payment method selection
+    public static void main(String[] args) {
+        java.awt.EventQueue.invokeLater(() -> {
+            new LoginFrame().setVisible(true);
+        });
+    }
 
-    public AdminDashboard(User adminUser) {
-        this.adminUser = adminUser;
+    public LoginFrame() {
         this.controller = new RentalController();
         initializeUI();
-        refreshAllData();
     }
 
     private void initializeUI() {
-        setTitle("DriveFlow Management System - Admin: " + adminUser.getUsername());
-        setSize(1100, 700);
+        setTitle("DriveFlow - Secure Login");
+        setSize(450, 550); // Compact vertical layout for login
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
         setLayout(new BorderLayout());
 
-        // Header with Logout
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(15, 23, 42)); // Dark modern slate
-        header.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20)); // Padding
-        
-        JLabel lblTitle = new JLabel("DriveFlow Corporate ERP", SwingConstants.LEFT);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblTitle.setForeground(Color.WHITE);
-        header.add(lblTitle, BorderLayout.WEST);
-        
-        // Logout Button
-        JButton btnLogout = new JButton("Logout");
-        btnLogout.setBackground(new Color(220, 38, 38)); // Danger Red
-        btnLogout.setForeground(Color.WHITE);
-        btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnLogout.setFocusPainted(false);
-        btnLogout.addActionListener(e -> {
-            this.dispose();
-            new LoginFrame().setVisible(true);
-        });
-        header.add(btnLogout, BorderLayout.EAST);
-        
-        add(header, BorderLayout.NORTH);
+        // Background Canvas Layer
+        JPanel backgroundPanel = new JPanel(new GridBagLayout());
+        backgroundPanel.setBackground(new Color(248, 250, 252)); // Soft Slate
 
-        // Core Layout
-        tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        // Crisp White Login Card
+        JPanel cardPanel = new JPanel(new GridBagLayout());
+        cardPanel.setBackground(Color.WHITE);
+        cardPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+            new EmptyBorder(40, 40, 40, 40)
+        ));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+
+        // --- Header Section ---
+        JLabel lblTitle = new JLabel("Welcome Back", SwingConstants.CENTER);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblTitle.setForeground(new Color(15, 23, 42));
+        gbc.gridy = 0;
+        gbc.insets = new Insets(0, 0, 5, 0);
+        cardPanel.add(lblTitle, gbc);
+
+        JLabel lblSubtitle = new JLabel("Sign in to access your dashboard.", SwingConstants.CENTER);
+        lblSubtitle.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblSubtitle.setForeground(new Color(100, 116, 139));
+        gbc.gridy = 1;
+        gbc.insets = new Insets(0, 0, 40, 0);
+        cardPanel.add(lblSubtitle, gbc);
+
+        // --- Input Fields ---
+        gbc.gridy = 2;
+        gbc.insets = new Insets(0, 0, 5, 0);
+        cardPanel.add(createFormLabel("System Username"), gbc);
+
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0, 0, 20, 0);
+        txtUsername = new JTextField(); 
+        styleInputField(txtUsername);
+        cardPanel.add(txtUsername, gbc);
+
+        gbc.gridy = 4;
+        gbc.insets = new Insets(0, 0, 5, 0);
+        cardPanel.add(createFormLabel("Secure Password"), gbc);
+
+        gbc.gridy = 5;
+        gbc.insets = new Insets(0, 0, 30, 0);
+        txtPassword = new JPasswordField(); 
+        styleInputField(txtPassword);
+        cardPanel.add(txtPassword, gbc);
+
+        // --- Action Buttons ---
+        gbc.gridy = 6;
+        gbc.insets = new Insets(0, 0, 15, 0);
         
-        setupFleetTab();
-        setupPendingTab();
-        setupReturnsTab();
-        setupFinancialsTab();
-        add(tabbedPane, BorderLayout.CENTER);
+        btnLogin = new JButton("Sign In to DriveFlow");
+        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnLogin.setBackground(new Color(37, 99, 235)); // Electric Blue Accent
+        btnLogin.setForeground(Color.WHITE);
+        btnLogin.setPreferredSize(new Dimension(0, 42));
+        btnLogin.setFocusPainted(false);
+        btnLogin.setBorder(BorderFactory.createEmptyBorder());
+        btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        btnLogin.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btnLogin.setBackground(new Color(29, 78, 216)); }
+            public void mouseExited(MouseEvent e) { btnLogin.setBackground(new Color(37, 99, 235)); }
+        });
+        btnLogin.addActionListener(e -> executeLogin());
+        cardPanel.add(btnLogin, gbc);
+
+        // Register Link (The connection to your RegisterFrame)
+        gbc.gridy = 7;
+        gbc.insets = new Insets(5, 0, 0, 0);
+        btnGoToRegister = new JButton("New client? Create an account");
+        btnGoToRegister.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnGoToRegister.setForeground(new Color(37, 99, 235));
+        btnGoToRegister.setBorderPainted(false);
+        btnGoToRegister.setContentAreaFilled(false);
+        btnGoToRegister.setFocusPainted(false);
+        btnGoToRegister.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        btnGoToRegister.addActionListener(e -> {
+            new RegisterFrame().setVisible(true); // Opens the register window
+            this.dispose(); // Closes this login window
+        });
+        cardPanel.add(btnGoToRegister, gbc);
+
+        // Assemble the layout
+        backgroundPanel.add(cardPanel);
+        add(backgroundPanel, BorderLayout.CENTER);
     }
 
-    private void applyModernTableStyle(JTable table) {
-        table.setRowHeight(35);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        table.getTableHeader().setBackground(new Color(241, 245, 249));
-        table.getTableHeader().setForeground(new Color(15, 23, 42));
-        table.setSelectionBackground(new Color(226, 232, 240));
-        table.setSelectionForeground(Color.BLACK);
-        table.setShowVerticalLines(false);
+    /**
+     * Standardizes input field geometry and typography.
+     */
+    private void styleInputField(JTextField field) {
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        field.setForeground(new Color(51, 65, 85));
+        field.setCaretColor(new Color(37, 99, 235));
+        field.setPreferredSize(new Dimension(0, 38));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+            BorderFactory.createEmptyBorder(0, 12, 0, 12)
+        ));
     }
 
-    private void setupFleetTab() {
-        JPanel panel = new JPanel(new BorderLayout());
-        
-        JPanel formPanel = new JPanel(new FlowLayout());
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        txtPlate = new JTextField(8); txtBrand = new JTextField(8);
-        txtModel = new JTextField(8); txtRate = new JTextField(8);
-        JButton btnAdd = new JButton("Add Vehicle");
-        
-        formPanel.add(new JLabel("Plate:")); formPanel.add(txtPlate);
-        formPanel.add(new JLabel("Brand:")); formPanel.add(txtBrand);
-        formPanel.add(new JLabel("Model:")); formPanel.add(txtModel);
-        formPanel.add(new JLabel("Rate:")); formPanel.add(txtRate);
-        formPanel.add(btnAdd);
-        
-        vehicleModel = new DefaultTableModel(new String[]{"Plate", "Brand", "Model", "Rate", "Status"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        vehicleTable = new JTable(vehicleModel);
-        applyModernTableStyle(vehicleTable);
-        
-        btnAdd.addActionListener(e -> {
-            try {
-                if(controller.addNewVehicle(txtPlate.getText(), txtBrand.getText(), txtModel.getText(), Double.parseDouble(txtRate.getText()))){
-                    JOptionPane.showMessageDialog(this, "Vehicle added!");
-                    refreshAllData();
-                }
-            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage()); }
-        });
-
-        panel.add(formPanel, BorderLayout.SOUTH);
-        panel.add(new JScrollPane(vehicleTable), BorderLayout.CENTER);
-        tabbedPane.addTab("Fleet Inventory", panel);
+    private JLabel createFormLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        label.setForeground(new Color(71, 85, 105));
+        return label;
     }
 
-    private void setupPendingTab() {
-        JPanel panel = new JPanel(new BorderLayout());
+    private void executeLogin() {
+        String username = txtUsername.getText().trim();
+        String password = new String(txtPassword.getPassword());
         
-        pendingModel = new DefaultTableModel(new String[]{"Rental ID", "Customer", "Plate", "Cost", "Status"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        pendingTable = new JTable(pendingModel);
-        applyModernTableStyle(pendingTable);
-        
-        JButton btnApprove = new JButton("Approve Rental");
-        btnApprove.setBackground(new Color(37, 99, 235));
-        btnApprove.setForeground(Color.WHITE);
-        
-        btnApprove.addActionListener(e -> {
-            int row = pendingTable.getSelectedRow();
-            if(row != -1) {
-                try {
-                    controller.approveRental((int)pendingModel.getValueAt(row, 0), (String)pendingModel.getValueAt(row, 2));
-                    refreshAllData();
-                } catch (SQLException ex) { JOptionPane.showMessageDialog(this, "Err: " + ex.getMessage()); }
-            } else {
-                JOptionPane.showMessageDialog(this, "Please select a pending rental to approve.");
-            }
-        });
-        
-        panel.add(new JScrollPane(pendingTable), BorderLayout.CENTER);
-        
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottomPanel.add(btnApprove);
-        panel.add(bottomPanel, BorderLayout.SOUTH);
-        
-        tabbedPane.addTab("Pending Approvals", panel);
-    }
+        // 1. Declare it here so it is visible to the whole method
+        User loggedInUser = null; 
 
-    private void setupReturnsTab() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        activeRentalsModel = new DefaultTableModel(new String[]{"Rental ID", "Plate", "End Date"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        activeRentalsTable = new JTable(activeRentalsModel);
-        applyModernTableStyle(activeRentalsTable);
-        
-        activeRentalsTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting() && activeRentalsTable.getSelectedRow() != -1) {
-                int row = activeRentalsTable.getSelectedRow();
-                txtReturnRentalId.setText(activeRentalsModel.getValueAt(row, 0).toString());
-                txtReturnPlate.setText(activeRentalsModel.getValueAt(row, 1).toString());
-                txtDelayDays.setText("0");
-                txtLateFee.setText("0.0");
-            }
-        });
-
-        // Configured to 7 grid lines layout rows for the new payment option field
-        JPanel form = new JPanel(new GridLayout(7, 2, 10, 10));
-        form.setBorder(BorderFactory.createTitledBorder("Return Details"));
-        
-        txtReturnRentalId = new JTextField(); 
-        txtReturnRentalId.setEditable(false); 
-        txtReturnPlate = new JTextField(); 
-        txtReturnPlate.setEditable(false);    
-        
-        txtDelayDays = new JTextField("0"); 
-        txtLateFee = new JTextField("0.0");
-        
-        txtDelayDays.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { updateFee(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { updateFee(); }
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { updateFee(); }
-
-            private void updateFee() {
-                Runnable doUpdate = () -> {
-                    try {
-                        String text = txtDelayDays.getText().trim();
-                        if (text.isEmpty() || text.equals("-")) {
-                            txtLateFee.setText("0.0");
-                            return;
-                        }
-                        int days = Integer.parseInt(text);
-                        double penaltyPerDay = 500.0; // Flat base parameter allocation
-                        double totalFee = Math.max(0, days * penaltyPerDay); 
-                        txtLateFee.setText(String.format("%.1f", totalFee));
-                    } catch (NumberFormatException ex) {
-                        txtLateFee.setText("0.0");
-                    }
-                };
-                SwingUtilities.invokeLater(doUpdate);
-            }
-        });
-
-        cmbCondition = new JComboBox<>(new String[]{"Excellent", "Good", "Damaged"});
-        cmbPaymentMethod = new JComboBox<>(new String[]{"Cash", "Card", "Bank Transfer"}); // Instantiation
-        
-        JButton btnReturn = new JButton("Process Return");
-        btnReturn.setBackground(new Color(16, 185, 129));
-        btnReturn.setForeground(Color.WHITE);
-        
-        form.add(new JLabel("Rental ID:")); form.add(txtReturnRentalId);
-        form.add(new JLabel("Plate:")); form.add(txtReturnPlate);
-        form.add(new JLabel("Delay Days:")); form.add(txtDelayDays);
-        form.add(new JLabel("Late Fee:")); form.add(txtLateFee);
-        form.add(new JLabel("Condition:")); form.add(cmbCondition);
-        form.add(new JLabel("Payment Method:")); form.add(cmbPaymentMethod); // UI Attachment
-        form.add(new JLabel("")); form.add(btnReturn);
-        
-        btnReturn.addActionListener(e -> {
-            if (txtReturnRentalId.getText().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please select an active rental from the table on the left.");
-                return;
-            }
-            try {
-                // Expanded call execution sequence block targeting updated schema definition parameters
-                controller.processReturn(
-                        Integer.parseInt(txtReturnRentalId.getText()), 
-                        txtReturnPlate.getText(), 
-                        Integer.parseInt(txtDelayDays.getText()), 
-                        Double.parseDouble(txtLateFee.getText()), 
-                        (String)cmbCondition.getSelectedItem(),
-                        (String)cmbPaymentMethod.getSelectedItem()
-                );
-                
-                JOptionPane.showMessageDialog(this, "Return Processed and Financial Ledger Generated Successfully!");
-                
-                txtReturnRentalId.setText(""); txtReturnPlate.setText("");
-                txtDelayDays.setText("0"); txtLateFee.setText("0.0");
-                
-                refreshAllData();
-            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Err: " + ex.getMessage()); }
-        });
-        
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(activeRentalsTable), form);
-        splitPane.setDividerLocation(450);
-        
-        panel.add(splitPane, BorderLayout.CENTER);
-        tabbedPane.addTab("Process Returns", panel);
-    }
-
-    private void setupFinancialsTab() {
-        paymentModel = new DefaultTableModel(new String[]{"Payment ID", "Rental ID", "Amount", "Method"}, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        paymentTable = new JTable(paymentModel);
-        applyModernTableStyle(paymentTable);
-        tabbedPane.addTab("Revenue Ledger", new JScrollPane(paymentTable));
-    }
-
-    private void refreshAllData() {
-        vehicleModel.setRowCount(0);
-        pendingModel.setRowCount(0);
-        paymentModel.setRowCount(0);
-        if (activeRentalsModel != null) {
-            activeRentalsModel.setRowCount(0);
-        }
-
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            // Load Fleet
-            for (Vehicle v : controller.getVehiclesByStatus("Available")) {
-                vehicleModel.addRow(new Object[]{v.getPlateNumber(), v.getBrand(), v.getModel(), v.getDailyRate(), v.getStatus()});
-            }
-
-            // Load Pending
-            String pendingQuery = "SELECT r.rental_id, u.username, r.vehicle_plate, r.total_cost, r.status " +
-                                  "FROM rental_records r JOIN users u ON r.customer_id = u.user_id " +
-                                  "WHERE r.status = 'Pending'";
-            try (PreparedStatement stmt = conn.prepareStatement(pendingQuery);
-                 ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    pendingModel.addRow(new Object[]{
-                        rs.getInt("rental_id"), 
-                        rs.getString("username"), 
-                        rs.getString("vehicle_plate"), 
-                        rs.getDouble("total_cost"), 
-                        rs.getString("status")
-                    });
-                }
-            }
-
-            // Load Active
-            String activeQuery = "SELECT rental_id, vehicle_plate, end_date FROM rental_records WHERE status = 'Active'";
-            try (PreparedStatement stmt = conn.prepareStatement(activeQuery);
-                 ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    activeRentalsModel.addRow(new Object[]{
-                        rs.getInt("rental_id"), 
-                        rs.getString("vehicle_plate"), 
-                        rs.getDate("end_date")
-                    });
-                }
-            }
-
-            // Load Revenue Ledger Elements
-            String revenueQuery = "SELECT payment_id, rental_id, amount, payment_method FROM payments";
-            try (PreparedStatement stmt = conn.prepareStatement(revenueQuery);
-                 ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    paymentModel.addRow(new Object[]{
-                        rs.getInt("payment_id"), 
-                        rs.getInt("rental_id"), 
-                        rs.getDouble("amount"), 
-                        rs.getString("payment_method")
-                    });
-                }
-            } catch (SQLException e) {
-                System.err.println("Note: Payments table sync variant failure context verification.");
-            }
-
-        } catch (SQLException ex) {
+        try {
+            // 2. Assign the value inside the try block
+            loggedInUser = controller.login(username, password);
+        } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Database Sync Error: " + ex.getMessage());
+            return; // Stop here if database crashes
         }
-    }
-    
-    public static void main(String[] args) {
-        User testAdmin = new User(1, "AdminTest", "password", "ADMIN") {};
-        java.awt.EventQueue.invokeLater(() -> {
-            new AdminDashboard(testAdmin).setVisible(true);
-        });
+
+        // 3. Now you can safely use it here because it is in the same scope
+        if (loggedInUser != null) {
+            if ("ADMIN".equalsIgnoreCase(loggedInUser.getRole())) {
+                new AdminDashboard(loggedInUser).setVisible(true);
+            } else {
+                // FIXED LINE: Cast to Customer explicitly
+                new CustomerPortal((Customer) loggedInUser).setVisible(true);
+            }
+            this.dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "Login Failed");
+        }
     }
 }
